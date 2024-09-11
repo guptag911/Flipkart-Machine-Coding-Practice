@@ -2,8 +2,7 @@ from singleton import Singleton
 from channel import Channel
 from datetime import datetime
 
-
-class BidBlitz(Singleton):
+class BidBlitz():
     def __init__(self):
         self.channel = Channel()
 
@@ -14,7 +13,7 @@ class BidBlitz(Singleton):
         if not event_date:
             event_date = datetime.now()
         else:
-            event_date = datetime.strptime(event_date, '%m/%d/%y')
+            event_date = datetime.strptime(str(event_date), '%m/%d/%y')
         self.channel.addEvent(event_name, prize_name, event_date)
 
     def registerMember(self, user_id, event_name):

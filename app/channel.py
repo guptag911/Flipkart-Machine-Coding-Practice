@@ -1,8 +1,6 @@
 from singleton import Singleton
-# from app.users.users import Users
-# from app.events.events import Events
-# from app.bids.Bid import Bid
-
+import threading
+from utils import locker
 from users import Users
 from events import Events
 from bids import Bid
@@ -16,7 +14,7 @@ class Channel(Singleton):
     __event_winners = {}
 
     def __init__(self):
-        pass
+        self.__lock = threading.Lock()
 
     def addUser(self, name, coins, fp_member):
         try:
@@ -26,51 +24,67 @@ class Channel(Singleton):
         except Exception as e:
             print(e)
             return
-    
+
     def addEvent(self, event_name, prize_name, event_date):
+        self.__lock.acquire()
         if event_name in self.__events:
             print("Event already exists")
+            self.__lock.release()
             return
         try:
             event = Events(event_name, prize_name, event_date)
             self.__events[event_name] = event
             self.__event_winners[event_name] = None
+            self.__lock.release()
         except Exception as e:
             print(e)
+            self.__lock.release()
             return
 
     def registerMember(self, user_id, event_name):
+        self.__lock.acquire()
         if user_id not in self.__users:
             print("User does not exist")
+            self.__lock.release()
             return
         if not self.__users[user_id].fp_member:
             print("Event only for Flipkart Plus members")
+            self.__lock.release()
             return
         if event_name not in self.__events:
             print("Event does not exist")
+            self.__lock.release()
             return
         if event_name in self.__event_members[event_name]:
             print("User already registered for event")
+            self.__lock.release()
             return
         self.__event_members[event_name].append(user_id)
+        self.__lock.release()
     
     def placeBids(self, user_id, event_name, amounts):
+        self.__lock.acquire()
         if user_id not in self.__users:
             print("User does not exist")
+            self.__lock.release()
             return
         if event_name not in self.__events:
             print("Event does not exist")
+            self.__lock.release()
             return
         if user_id not in self.__event_members[event_name]:
             print("User already registered for event")
+            self.__lock.release()
             return
         if len(amounts)>self.MAX_BIDS:
             print(f"Max of {self.MAX_BIDS} bids can be placed")
+            self.__lock.release()
             return
         bid_amount = sum(amounts)
         user = self.__users[user_id]
         if user.get_coins() < bid_amount:
             print("Insufficient Balance")
+            self.__lock.release()
             return
         max_bid, min_bid = max(amounts), min(amounts)
         user.pledgeCoins(max_bid)
@@ -85,6 +99,7 @@ class Channel(Singleton):
                 curr_winner["bid_amount"] = min_bid
                 curr_winner["user"] = user
         self.__event_winners[event_name] = curr_winner
+        self.__lock.release()
 
     def declareWinner(self, event_name):
         if event_name not in self.__events:
